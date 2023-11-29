@@ -1,0 +1,17 @@
+---
+debug: true
+
+data:
+    input_dir: /home/lina/code/nlp-us-patents/data
+    cpc_scheme_xml_dir: ${data.input_dir}/CPCSchemeXML202105
+    cpc_title_list_dir: ${data.input_dir}/CPCTitleList202202
+
+bert:
+    output_dir: outputs
+    evaluation_strategy: steps
+    eval_steps: 10
+    per_device_train_batch_size: 64
+    per_device_eval_batch_size: 2000
+    num_train_epochs: 1
+    seed: 0
+    load_best_model_at_end: true
