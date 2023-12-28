@@ -62,7 +62,7 @@ You need a credit card and 10$ min spend to sign up on https://cloud.jarvislabs.
 #### Connect to it
 Copy the ssh command by clicking the ssh icon next to the started instance in jarvis dashboard. Paste it in your terminal and log into the instance.
 Go into the downloaded repository
-`$ python -m us_patents.train debug=False data.input_dir=$PWD/data`
+`$ python -m us_patents.train run.debug=False data.input_dir=$PWD/data`
 
 #### Pause instance
 After training you can pause the instance to pay only a basic fee for a paused instance. Append this to your training script

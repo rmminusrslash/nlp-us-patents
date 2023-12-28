@@ -1,12 +1,21 @@
 ---
-debug: true
+defaults:
+  # disable logging by Hydra
+    - override hydra/job_logging: none
+    - override hydra/hydra_logging: none
+    - _self_
+
+run:
+    seed: 42
+    debug: true
+
 
 data:
     input_dir: /home/lina/code/nlp-us-patents/data
     cpc_scheme_xml_dir: ${data.input_dir}/CPCSchemeXML202105
     cpc_title_list_dir: ${data.input_dir}/CPCTitleList202202
 
-bert:
+trainer:
     output_dir: outputs
 
     # evaluation, logging & saving
@@ -44,4 +53,10 @@ bert:
     remove_unused_columns: true
     dataloader_pin_memory: true
     dataloader_num_workers: 2
-    seed: 42
+
+# experiment logging
+wandb:
+    enabled: false
+    project: nlp-us-patents
+    notes: ${run.comment}
+    name: fold_${run.fold}

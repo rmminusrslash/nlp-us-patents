@@ -1,7 +1,13 @@
+import os
+import random
+
 import hydra
+import numpy as np
 import pandas as pd
 import torch
+import wandb
 from datasets import Dataset
+from dotenv import load_dotenv
 from loguru import logger
 from omegaconf import OmegaConf
 from transformers import (
@@ -15,13 +21,59 @@ from us_patents import data
 from us_patents.callbacks import SaveBestModelCallback
 from us_patents.metrics import PearsonCorrelationCoefficient
 
+load_dotenv()
 
-@hydra.main(config_name="config.yaml")
+
+def set_seeds(seed=42):
+    """
+    Function that sets seed for pseudo-random number generators in:
+    pytorch, numpy, python.
+    Makes sure to get reproducible results.
+    Args:
+        seed (int, optional): seed value. Defaults to 42.
+    """
+    random.seed(seed)
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+    logger.info(f"-> Global seed set to {seed}")
+
+
+@hydra.main(config_name="config.yaml", config_path=".", version_base="1.1")
 def simple_baseline(cfg: OmegaConf):
     """simplified version of a training script with only the bare essentials"""
+
+    if cfg.run.debug:
+        logger.warning("Running in debug mode. Weights & Biases logging is disabled\n")
+        cfg.wandb.enabled = False
+        cfg.trainer.report_to = "none"
+        cfg.trainer.num_train_epochs = 1
+
+    local_run = os.environ.get("USER") != "root"
+    if local_run:
+        cfg.trainer.fp16 = False
+    else:
+        logger.info(f"Using GPU: {torch.cuda.get_device_name(0)}")
+
+    if cfg.wandb.enabled:
+        logger.info("Weights & Biases logging is enabled")
+        wandb.init(
+            config=cfg,
+            project=cfg.wandb.project,
+            group=cfg.run.experiment_name,
+            name=cfg.wandb.name,
+            notes=cfg.wandb.notes,
+        )
+
+    set_seeds(cfg.run.seed)
+
     df = pd.read_csv(f"{cfg.data.input_dir}/train.csv")
 
-    if cfg.debug:
+    if cfg.run.debug:
         df = df.sample(100).reset_index()
 
     df = data.prepare_data(df, cfg.data.cpc_scheme_xml_dir, cfg.data.cpc_title_list_dir)
@@ -30,8 +82,10 @@ def simple_baseline(cfg: OmegaConf):
     # load pretrained model
     model_name = "bert-large-uncased"
     tokenizer = BertTokenizer.from_pretrained(model_name)
-    print(tokenizer)
     model = BertForSequenceClassification.from_pretrained(model_name, num_labels=1)
+
+    if cfg.run.debug:
+        print(model)
 
     # make it a regression problem (1 output)
     model.classifier = torch.nn.Linear(model.config.hidden_size, out_features=1)
@@ -62,8 +116,7 @@ def simple_baseline(cfg: OmegaConf):
     )
 
     logger.info(
-        f"Tokenize inputs, example: {df.loc[0].input_ids}: "
-        f"{tokenizer.decode(df.loc[0].input_ids)}"
+        f"Tokenize inputs, example: " f"{tokenizer.decode(df.loc[0].input_ids)}"
     )
     # the model expects certain column names for input and output
     df.rename(columns={"score": "label"}, inplace=True)
@@ -72,7 +125,7 @@ def simple_baseline(cfg: OmegaConf):
     ds_train = Dataset.from_pandas(df[df.fold != 4])
     ds_val = Dataset.from_pandas(df[df.fold == 4])
 
-    trainer_args = TrainingArguments(**cfg.bert)
+    trainer_args = TrainingArguments(**cfg.trainer)
 
     trainer = Trainer(
         model,
