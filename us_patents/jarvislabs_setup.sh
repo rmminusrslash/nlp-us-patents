@@ -10,7 +10,7 @@ cd nlp-us-patents
 ## set up dependencies
 curl -sSL https://install.python-poetry.org | python3 -
 export PATH="/home/.local/bin:$PATH"
-echo export PATH="/home/.local/bin:$PATH" >> ~/.bashrc
+echo export PATH="/root/.local/bin:$PATH" >> ~/.bashrc
 poetry completions bash >> ~/.bash_completion
 # install without env so that the already installed torch package is accessible
 poetry config virtualenvs.create false
@@ -38,5 +38,4 @@ cd ..
 
 
 # run training
-#cd ..
-#python -m nlp.kaggle_patents.train debug=False data.input_dir=$PWD/data 
+#python -m us_patents.train debug=False data.input_dir=$PWD/data 
