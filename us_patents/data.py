@@ -35,7 +35,7 @@ def prepare_data(
     )
 
     # prepare input text
-    sep = " | "
+    sep = " [s] "
     df["input_text"] = (
         df["cleaned_context_text"].str.lower() + sep + df["anchor"] + sep + df["target"]
     )

@@ -8,10 +8,40 @@ data:
 
 bert:
     output_dir: outputs
+
+    # evaluation, logging & saving
     evaluation_strategy: steps
-    eval_steps: 10
-    per_device_train_batch_size: 64
-    per_device_eval_batch_size: 2000
-    num_train_epochs: 1
-    seed: 0
+    logging_strategy: steps
+    save_strategy: steps
+    save_total_limit: 1
+    report_to: wandb
+    save_steps: 150
+    eval_steps: 150
+    logging_steps: 150
+
     load_best_model_at_end: true
+    metric_for_best_model: pearson_corr
+    greater_is_better: true
+
+    # optimization
+    learning_rate: 2.0e-5
+    warmup_ratio: 0.1
+    weight_decay: 0.01
+    lr_scheduler_type: cosine
+    adam_beta1: 0.9
+    adam_beta2: 0.98
+    adam_epsilon: 1.0e-6
+
+    # train settings
+    num_train_epochs: 5
+    gradient_accumulation_steps: 1
+    per_device_train_batch_size: 96
+    per_device_eval_batch_size: 96
+    group_by_length: true
+    fp16: true
+
+    # Misc
+    remove_unused_columns: true
+    dataloader_pin_memory: true
+    dataloader_num_workers: 2
+    seed: 42

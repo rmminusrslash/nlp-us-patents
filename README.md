@@ -43,7 +43,7 @@ Answers
 ### Locally
 1. Download data:
   ````
-  $ export KAGGLE_API_KEY=yourkey
+ $ export KAGGLE_API_KEY=yourkey
  $ export KAGGLE_USER=youruser
  $ bash use_patents/download_data.sh  
  ````
@@ -53,7 +53,7 @@ Answers
  ````
 If you have a gpu, you can change pyproject.toml to the gpu based version of pytorch for a faster run.
 
-## Use the GPU-for-rent service jarvislabs.ai
+### Use the GPU-for-rent service jarvislabs.ai
 If one has basic developer knowledge, these services are much nicer and faster to use than kaggle, colab or big players like aws.
 
 #### Start a GPU instance

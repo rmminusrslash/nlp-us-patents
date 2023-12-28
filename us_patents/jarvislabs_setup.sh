@@ -4,9 +4,8 @@
 cd /home
 
 ## get training code
-git clone https://github.com/rmminusrslash/ml_prototyping.git
-cd ml_prototyping
-git checkout custom_embeddings
+git clone https://github.com/rmminusrslash/nlp-us-patents.git
+cd nlp-us-patents
 
 ## set up dependencies
 curl -sSL https://install.python-poetry.org | python3 -
@@ -15,14 +14,14 @@ echo export PATH="/home/.local/bin:$PATH" >> ~/.bashrc
 poetry completions bash >> ~/.bash_completion
 # install without env so that the already installed torch package is accessible
 poetry config virtualenvs.create false
-poetry install --without dev
+poetry install --without dev --no-root
 
 ## Download data
 
 echo "Writing Kaggle API key to ~/.kaggle/kaggle.json"
 mkdir -p ~/.kaggle
 cat <<EOF > ~/.kaggle/kaggle.json
-{"username":"lina261486","key":"yourkeys"}
+{"username":"lina261486","key":"yourkey"}
 EOF
 
 cat ~/.kaggle/kaggle.json
@@ -35,6 +34,7 @@ cd data/
 kaggle datasets download -d atharvaingle/uspppm-data
 unzip uspppm-data.zip
 rm uspppm-data.zip
+cd ..
 
 
 # run training

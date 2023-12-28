@@ -2,6 +2,7 @@ import hydra
 import pandas as pd
 import torch
 from datasets import Dataset
+from loguru import logger
 from omegaconf import OmegaConf
 from transformers import (
     BertForSequenceClassification,
@@ -12,7 +13,7 @@ from transformers import (
 
 from us_patents import data
 from us_patents.callbacks import SaveBestModelCallback
-from us_patents.metrics import Pearsonr
+from us_patents.metrics import PearsonCorrelationCoefficient
 
 
 @hydra.main(config_name="config.yaml")
@@ -29,6 +30,7 @@ def simple_baseline(cfg: OmegaConf):
     # load pretrained model
     model_name = "bert-large-uncased"
     tokenizer = BertTokenizer.from_pretrained(model_name)
+    print(tokenizer)
     model = BertForSequenceClassification.from_pretrained(model_name, num_labels=1)
 
     # make it a regression problem (1 output)
@@ -44,13 +46,25 @@ def simple_baseline(cfg: OmegaConf):
     model.optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
 
     def tokenize(text):
-        res = tokenizer(text, padding=True, truncation=True, max_length=512)
+        res = tokenizer(
+            text,
+            padding=True,
+            truncation=True,
+            max_length=512,
+            add_special_tokens=True,
+            return_token_type_ids=True,
+        )
+
         return res["input_ids"], res["token_type_ids"], res["attention_mask"]
 
     df[["input_ids", "token_type_ids", "attention_mask"]] = df.apply(
         lambda x: tokenize(x.input_text), axis=1, result_type="expand"
     )
 
+    logger.info(
+        f"Tokenize inputs, example: {df.loc[0].input_ids}: "
+        f"{tokenizer.decode(df.loc[0].input_ids)}"
+    )
     # the model expects certain column names for input and output
     df.rename(columns={"score": "label"}, inplace=True)
 
@@ -66,8 +80,10 @@ def simple_baseline(cfg: OmegaConf):
         train_dataset=ds_train,
         eval_dataset=ds_val,
         tokenizer=tokenizer,
-        compute_metrics=Pearsonr(),
-        callbacks=[SaveBestModelCallback(metric_name="pearsonr")],
+        compute_metrics=PearsonCorrelationCoefficient(),
+        callbacks=[
+            SaveBestModelCallback(metric_name=PearsonCorrelationCoefficient.name)
+        ],
     )
     trainer.train()
 
