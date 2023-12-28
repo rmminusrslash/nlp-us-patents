@@ -36,8 +36,6 @@ Answers
 - a "debug" option that samples a tiny amount of training data is as always useful to confirm the end-2-end flow works
 
 
-
-
 ## How to run 
 
 ### Locally
@@ -66,10 +64,4 @@ Go into the downloaded repository
 
 #### Pause instance
 After training you can pause the instance to pay only a basic fee for a paused instance. Append this to your training script
-`python3 -c "from jarviscloud import jarviscloud; jarviscloud.pause[]" `
-
-TODOS
-- traing done, but not the same performance as in weights and biases -> 74.8 todo: check worst bert performance in w+b
-
-- next: improve performance
-- in jarvislab script, remove the branch and use master
+`python3 -c "from jarviscloud import jarviscloud; jarviscloud.pause[]" ` Pausing costs for taken disk space, so it is better to use very little and upload the artifarcts instead.

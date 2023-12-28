@@ -23,7 +23,6 @@ trainer:
     logging_strategy: steps
     save_strategy: steps
     save_total_limit: 1
-    report_to: wandb
     save_steps: 150
     eval_steps: 150
     logging_steps: 150
@@ -56,7 +55,7 @@ trainer:
 
 # experiment logging
 wandb:
-    enabled: false
+    enabled: true
     project: nlp-us-patents
-    notes: ${run.comment}
-    name: fold_${run.fold}
+    group: bert_large_uncased
+    name: fold_4

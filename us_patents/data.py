@@ -2,6 +2,7 @@ import re
 from pprint import pprint
 
 import pandas as pd
+from loguru import logger
 from sklearn.model_selection import StratifiedGroupKFold
 from transformers import PreTrainedTokenizer
 
@@ -68,6 +69,9 @@ def create_folds(
 
     train_df["score_bin"] = pd.cut(train_df["score"], bins=5, labels=False)
     train_df["fold"] = -1
+    logger.info(
+        f"Prediction score bins: {train_df['score_bin'].value_counts().sort_index()}"
+    )
     sgkf = StratifiedGroupKFold(n_splits=n_folds, shuffle=True, random_state=seed)
     folds = sgkf.split(
         X=train_df,

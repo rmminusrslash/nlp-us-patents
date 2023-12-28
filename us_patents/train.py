@@ -1,3 +1,5 @@
+# type: ignore
+
 import os
 import random
 
@@ -5,7 +7,6 @@ import hydra
 import numpy as np
 import pandas as pd
 import torch
-import wandb
 from datasets import Dataset
 from dotenv import load_dotenv
 from loguru import logger
@@ -17,6 +18,7 @@ from transformers import (
     TrainingArguments,
 )
 
+import wandb
 from us_patents import data
 from us_patents.callbacks import SaveBestModelCallback
 from us_patents.metrics import PearsonCorrelationCoefficient
@@ -50,7 +52,6 @@ def simple_baseline(cfg: OmegaConf):
     if cfg.run.debug:
         logger.warning("Running in debug mode. Weights & Biases logging is disabled\n")
         cfg.wandb.enabled = False
-        cfg.trainer.report_to = "none"
         cfg.trainer.num_train_epochs = 1
 
     local_run = os.environ.get("USER") != "root"
@@ -62,11 +63,10 @@ def simple_baseline(cfg: OmegaConf):
     if cfg.wandb.enabled:
         logger.info("Weights & Biases logging is enabled")
         wandb.init(
-            config=cfg,
+            config=OmegaConf.to_container(cfg, resolve=True),
             project=cfg.wandb.project,
-            group=cfg.run.experiment_name,
+            group=cfg.wandb.group,
             name=cfg.wandb.name,
-            notes=cfg.wandb.notes,
         )
 
     set_seeds(cfg.run.seed)
@@ -89,15 +89,6 @@ def simple_baseline(cfg: OmegaConf):
 
     # make it a regression problem (1 output)
     model.classifier = torch.nn.Linear(model.config.hidden_size, out_features=1)
-    model.criterion = torch.nn.MSELoss()
-    """todo: check what difference the loss made
-    if loss_type == "mse":
-            self.loss_fn = nn.MSELoss()
-        elif loss_type == "bce":
-            self.loss_fn = nn.BCEWithLogitsLoss()
-        elif loss_type == "pearson":
-            self.loss_fn = CorrLoss()"""
-    model.optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
 
     def tokenize(text):
         res = tokenizer(
@@ -123,9 +114,11 @@ def simple_baseline(cfg: OmegaConf):
 
     # select one of the folds for evaluation
     ds_train = Dataset.from_pandas(df[df.fold != 4])
-    ds_val = Dataset.from_pandas(df[df.fold == 4])
 
-    trainer_args = TrainingArguments(**cfg.trainer)
+    ds_val = Dataset.from_pandas(df[df.fold == 4])
+    trainer_args = TrainingArguments(
+        **cfg.trainer, report_to="wandb" if cfg.wandb.enabled else "none"
+    )
 
     trainer = Trainer(
         model,
@@ -139,6 +132,32 @@ def simple_baseline(cfg: OmegaConf):
         ],
     )
     trainer.train()
+
+    # predict on val set with best model loaded at end
+    logits, _, metrics = trainer.predict(ds_val)
+
+    # store predictions
+    val_df = df[df.fold == 4]
+    val_df["preds"] = logits.reshape(-1)
+    val_df["error"] = (val_df["preds"] - val_df.label).abs()
+    val_df = val_df.sort_values(by=["error"], ascending=False)
+
+    val_df.to_csv("eval_fold_preds.csv", index=False)
+    cols = ["input_text", "error"]
+    print(f"Most wrong: {val_df[cols].head(10).values}")
+
+    # CV score
+    cv_score = np.round(metrics["test_pearsonr"], 5)
+    logger.info(f"Cross validation score {cv_score}")
+
+    if cfg.wandb.enabled:
+        wandb.log({"cv": cv_score})
+        # one could upload log files here or the model
+        # wandb.save(cfg.paths.experiment_config_file)
+        # model_artifact = wandb.Artifact(name=cfg.run.experiment_name, type="model")
+        # model_artifact.add_dir(upload_dir)
+        # wandb.log_artifact(model_artifact)
+        wandb.finish()
 
 
 if __name__ == "__main__":
